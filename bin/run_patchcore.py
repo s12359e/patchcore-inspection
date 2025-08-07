@@ -240,6 +240,9 @@ def run(
 @main.command("patch_core")
 # Pretraining-specific parameters.
 @click.option("--backbone_names", "-b", type=str, multiple=True, default=[])
+@click.option(
+    "--backbone_paths", "-bp", type=click.Path(exists=True), multiple=True, default=[]
+)
 @click.option("--layers_to_extract_from", "-le", type=str, multiple=True, default=[])
 # Parameters for Glue-code (to merge different parts of the pipeline.
 @click.option("--pretrain_embed_dimension", type=int, default=1024)
@@ -258,6 +261,7 @@ def run(
 @click.option("--faiss_num_workers", type=int, default=8)
 def patch_core(
     backbone_names,
+    backbone_paths,
     layers_to_extract_from,
     pretrain_embed_dimension,
     target_embed_dimension,
@@ -272,6 +276,13 @@ def patch_core(
     faiss_num_workers,
 ):
     backbone_names = list(backbone_names)
+    backbone_paths = list(backbone_paths)
+    if len(backbone_paths) == 0:
+        backbone_paths = [None] * len(backbone_names)
+    elif len(backbone_paths) != len(backbone_names):
+        raise click.ClickException(
+            "--backbone_paths must match number of --backbone_names"
+        )
     if len(backbone_names) > 1:
         layers_to_extract_from_coll = [[] for _ in range(len(backbone_names))]
         for layer in layers_to_extract_from:
@@ -283,8 +294,8 @@ def patch_core(
 
     def get_patchcore(input_shape, sampler, device):
         loaded_patchcores = []
-        for backbone_name, layers_to_extract_from in zip(
-            backbone_names, layers_to_extract_from_coll
+        for backbone_name, layers_to_extract_from, backbone_path in zip(
+            backbone_names, layers_to_extract_from_coll, backbone_paths
         ):
             backbone_seed = None
             if ".seed-" in backbone_name:
@@ -293,6 +304,8 @@ def patch_core(
                 )
             backbone = patchcore.backbones.load(backbone_name)
             backbone.name, backbone.seed = backbone_name, backbone_seed
+            if backbone_path is not None:
+                patchcore.utils.load_pretrained_weights(backbone, backbone_path, device)
 
             nn_method = patchcore.common.FaissNN(faiss_on_gpu, faiss_num_workers)
 

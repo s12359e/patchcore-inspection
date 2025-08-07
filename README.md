@@ -104,6 +104,7 @@ python bin/run_patchcore.py \
 
 patch_core  # We now pass all PatchCore-related parameters.
 -b wideresnet50  # Which backbone to use.
+-bp /path/to/simclr.pth  # Optional path to custom backbone weights.
 -le layer2 -le layer3 # Which layers to extract features from.
 --faiss_on_gpu # If similarity-searches should be performed on GPU.
 --pretrain_embed_dimension 1024  --target_embed_dimension 1024 # Dimensionality of features extracted from backbone layer(s) and final aggregated PatchCore Dimensionality
@@ -145,7 +146,8 @@ allows you to log all training & test performances online to Weights-and-Biases 
 
 Finally, due to the effectiveness and efficiency of PatchCore, we also incorporate the option to use
 an ensemble of backbone networks and network featuremaps. For this, provide the list of backbones to
-use (as listed in `/src/anomaly_detection/backbones.py`) with `-b <backbone` and, given their
+use (as listed in `/src/anomaly_detection/backbones.py`) with `-b <backbone>` and optionally
+provide paths to custom pretrained weights via `-bp <path>` following the same order. Given their
 ordering, denote the layers to extract with `-le idx.<layer_name>`. An example with three different
 backbones would look something like
 
