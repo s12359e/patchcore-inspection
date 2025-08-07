@@ -173,3 +173,36 @@ def compute_and_store_final_results(
 
     mean_metrics = {"mean_{0}".format(key): item for key, item in mean_metrics.items()}
     return mean_metrics
+
+
+def load_pretrained_weights(model, weight_path, device):
+    """Load a backbone checkpoint into ``model``.
+
+    The checkpoint is expected to be a ``torch.load``-able object and may
+    optionally contain a ``state_dict`` entry. Key prefixes such as
+    ``module.``, ``model.``, or ``backbone.`` are stripped to allow loading
+    checkpoints produced by frameworks like SimCLR.
+
+    Args:
+        model: Backbone network to load weights into.
+        weight_path: Path to the checkpoint file.
+        device: Torch device to map the checkpoint to.
+    """
+
+    checkpoint = torch.load(weight_path, map_location=device)
+    state_dict = checkpoint.get("state_dict", checkpoint)
+
+    cleaned_state_dict = {}
+    for key, value in state_dict.items():
+        for prefix in ("module.", "model.", "backbone."):
+            if key.startswith(prefix):
+                key = key[len(prefix) :]
+        cleaned_state_dict[key] = value
+
+    missing, unexpected = model.load_state_dict(cleaned_state_dict, strict=False)
+    if missing:
+        LOGGER.warning("Missing keys when loading state dict: %s", missing)
+    if unexpected:
+        LOGGER.warning("Unexpected keys when loading state dict: %s", unexpected)
+
+    return model
